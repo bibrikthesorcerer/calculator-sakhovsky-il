@@ -4,3 +4,4 @@
 *.exe
 .vscode
 build/
+googletest/
