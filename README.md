@@ -23,13 +23,9 @@ FLOAT_MODE:
 To build this program You need a **C compiler** such as [gcc](https://en.wikipedia.org/wiki/GNU_Compiler_Collection), [clang](https://en.wikipedia.org/wiki/Clang), etc.  
 *(you can even use `zig cc` if you think you're cool enough)*
 
-From that, **building is straightforward** - navigate into directory with `main.c`, compile and run it.
+You'll also need `git`, `cmake` and `make` if you want to run unit tests
 
-For example, you can compile and run this program using `gcc` **like this**:
-```bash
-gcc main.c -o <OUTPUT_FILE>
-./<OUTPUT_FILE>
-```
+All sources are in `src/` folder so you can compile them yourself or use **Makefile**
 
 ### Makefile
 I've included **gcc-based Makefile** in repo, so you can use:
@@ -103,15 +99,15 @@ typedef union {
 **App is capable to calculate in INT and FLOAT modes.**  
 I've added mode managing with `set_mode()/get_mode()`
 
-3. **Input Handling**  
+### 3. **Input Handling**  
 Before calculation, program validates and sanitizes input using `validate_and_strip_input()`.  
 This function removes whitespaces and checks for valid input characters using `is_valid_char()` function.
 
-4. **Error Handling**  
-I've added exit codes to the app.
+### 4. **Error Handling**  
+I've added exit codes to the app.  
 | Error situation  | Exit code |
 | ---------------- | --------- |
 | Division by zero in `INT_MODE`  | 1  |
-| Division by a number less than<br>`$10^-4$`in `FLOAT_MODE`  | 2  |
+| Division by a number less than `0.0001` in `FLOAT_MODE`  | 2  |
 | Invalid input symbol | 3 |
 | Not closed parenthesis | 4 |
