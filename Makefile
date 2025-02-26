@@ -30,7 +30,14 @@ FORMAT_DIRS = $(SRC_DIR) $(UNIT_TESTS_DIR)
 FORMAT_EXTS = *.cpp *.c *.h
 CLANG_FORMAT = clang-format
 
-.PHONY: all clean run-app run-unit-test format
+# Python integration tests
+VENV = venv
+PYTHON = $(VENV)/bin/python
+PIP = $(VENV)/bin/pip
+INT_TEST_DIR = tests/integration
+INT_TESTS = $(INT_TEST_DIR)/tests.py
+
+.PHONY: all clean run-app run-unit-test format venv run-integration-tests
 
 all: $(APP_EXE) $(TEST_EXE)
 
@@ -82,3 +89,12 @@ format:
 		-name "*.c" -o \
 		-name "*.h" \
 	\) -exec $(CLANG_FORMAT) -i -style=file {} +
+
+$(VENV):
+	@python3 -m venv $(VENV)
+	@$(PIP) install --upgrade pip
+	@$(PIP) list | grep -q pytest || $(PIP) install pytest
+
+run-integration-tests: $(VENV) $(APP_EXE)
+	@. venv/bin/activate
+	@pytest $(INT_TESTS)

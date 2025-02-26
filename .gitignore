@@ -5,3 +5,5 @@
 .vscode
 build/
 googletest/
+.venv/
+.pytest_cache/

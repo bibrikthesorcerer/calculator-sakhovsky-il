@@ -25,15 +25,22 @@ void validate_and_strip_input(char* buffer)
 {
     char* old = buffer; // iterator, goes all way through buffer
     char* new = buffer; // iterator, copies non-whitespaces in buffer
+    int parenthesis = 0;
     for (; *old != 0; ++old) {
         if (!is_valid_char(*old)) exit(3);
         if (isspace(*old)) // skip spaces
             continue;
-
+        if (*old == '(')
+            ++parenthesis;
+        if (*old == ')')
+            --parenthesis;
         *new = *old; // copy non-spaces
         ++new;       // move iter
     }
     *new = 0; // add \0
+
+    if (parenthesis != 0)
+        exit(4);
 }
 
 // retrieves either next number or result of calculated expression in parenthesis
@@ -45,11 +52,8 @@ NumberType get_operand(char* buffer)
     if (buffer[global_pos] == '(') {
         global_pos++;
         num = calculate_expression(buffer);
-        if (buffer[global_pos] == ')') {
-            global_pos++;
-            return num;
-        } else
-            exit(4);
+        global_pos++;
+        return num;
     }
     // construct a number if no parenthesis met
     if (currentMode == INT_MODE) {
