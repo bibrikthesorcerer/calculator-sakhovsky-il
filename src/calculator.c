@@ -26,21 +26,46 @@ void validate_and_strip_input(char* buffer)
     char* old = buffer; // iterator, goes all way through buffer
     char* new = buffer; // iterator, copies non-whitespaces in buffer
     int parenthesis = 0;
+    int operation = 0;
+    int prev_char_was_digit = 0;
+    int space_count = 0;
+
     for (; *old != 0; ++old) {
         if (!is_valid_char(*old)) exit(3);
-        if (isspace(*old)) // skip spaces
+
+        if (isspace(*old)) {
+            space_count++;
             continue;
-        if (*old == '(')
-            ++parenthesis;
-        if (*old == ')')
-            --parenthesis;
+        }
+
+        if (isdigit(*old)) {
+            if (prev_char_was_digit && space_count > 0) {
+                // Two numbers separated by spaces without an operator
+                exit(3);
+            }
+            prev_char_was_digit = 1;
+        } else {
+            prev_char_was_digit = 0;
+        }
+
+        space_count = 0;
+
+        if (*old == '(') ++parenthesis;
+        if (*old == ')') --parenthesis;
+
+        if (strchr("+-*/", *old)) {
+            if (operation == 1) exit(3);
+            operation = 1;
+        } else {
+            operation = 0;
+        }
+
         *new = *old; // copy non-spaces
         ++new;       // move iter
     }
     *new = 0; // add \0
 
-    if (parenthesis != 0)
-        exit(4);
+    if (parenthesis != 0) exit(4);
 }
 
 // retrieves either next number or result of calculated expression in parenthesis
