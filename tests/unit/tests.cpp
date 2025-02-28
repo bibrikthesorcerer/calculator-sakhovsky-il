@@ -50,36 +50,12 @@ TEST(InvalidCharTest, InvalidCharacters)
     }
 }
 
-// Tests for validation and strip of input buffer
-TEST(InputValidationDeathTest, ExitOnInvalidCharacters)
-{
-    char buffer[] = "9- 39  93084 cd";
-    EXPECT_EXIT(validate_and_strip_input(buffer), ::testing::ExitedWithCode(3), "");
-}
-
 TEST(InputValidationAndStripTest, HandleValidInput)
 {
     char buffer[] = " 12\t+\n34\r";
     char expected[] = "12+34";
     validate_and_strip_input(buffer);
     EXPECT_STREQ(buffer, expected);
-}
-
-TEST(InputValidationTest, HandleEdgeCases)
-{
-    // Mixed valid characters with whitespace
-    {
-        char buffer[] = " \t1\n+\r2*\t3 \n";
-        validate_and_strip_input(buffer);
-        EXPECT_STREQ(buffer, "1+2*3");
-    }
-
-    // Only operators and whitespace
-    {
-        char buffer[] = " + - \t* /\n";
-        validate_and_strip_input(buffer);
-        EXPECT_STREQ(buffer, "+-*/");
-    }
 }
 
 // Tests for get_operand

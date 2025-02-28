@@ -2,8 +2,9 @@
 *.out
 *.elf
 *.exe
-.vscode
+.vscode/
 build/
 googletest/
-.venv/
+venv/
 .pytest_cache/
+tests/integration/__pycache__/

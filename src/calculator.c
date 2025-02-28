@@ -26,9 +26,11 @@ void validate_and_strip_input(char* buffer)
     char* old = buffer; // iterator, goes all way through buffer
     char* new = buffer; // iterator, copies non-whitespaces in buffer
     int parenthesis = 0;
-    int operation = 0;
     int prev_char_was_digit = 0;
     int space_count = 0;
+    int prev_char_was_operator = 0;    // Track if the previous character was an operator
+    int prev_char_was_open_paren = 0;  // Track if the previous character was an opening parenthesis
+    int prev_char_was_close_paren = 0; // Track if the previous character was a closing parenthesis
 
     for (; *old != 0; ++old) {
         if (!is_valid_char(*old)) exit(3);
@@ -50,14 +52,27 @@ void validate_and_strip_input(char* buffer)
 
         space_count = 0;
 
-        if (*old == '(') ++parenthesis;
-        if (*old == ')') --parenthesis;
-
         if (strchr("+-*/", *old)) {
-            if (operation == 1) exit(3);
-            operation = 1;
+            // Check for invalid unary operators
+            if ((prev_char_was_operator || prev_char_was_open_paren || new == buffer) && !prev_char_was_close_paren) {
+                exit(3);
+            }
+            prev_char_was_operator = 1;
         } else {
-            operation = 0;
+            prev_char_was_operator = 0;
+        }
+
+        if (*old == '(') {
+            ++parenthesis;
+            prev_char_was_open_paren = 1;
+            prev_char_was_close_paren = 0;
+        } else if (*old == ')') {
+            --parenthesis;
+            prev_char_was_close_paren = 1;
+            prev_char_was_open_paren = 0;
+        } else {
+            prev_char_was_open_paren = 0;
+            prev_char_was_close_paren = 0;
         }
 
         *new = *old; // copy non-spaces

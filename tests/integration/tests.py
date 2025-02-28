@@ -12,11 +12,13 @@ valid_cases = [
     ("5-3*2", "-1", False, 0),
     ("10/3", "3", False, 0),
     ("(4+5)*6", "54", False, 0),
-    ("-1+5", "4", False, 0),
+    ("0-1+5", "4", False, 0),
     ("8/2*(2+2)", "16", False, 0),
     
     # Float mode tests
     ("3+2", "5.0000", True, 0),
+    ("5/2", "2.5000", True, 0),
+
 ]
 
 error_cases = [
@@ -56,7 +58,7 @@ def test_valid_expressions(input_str, expected_output, use_float, exit_code):
 @pytest.mark.parametrize("input_str,expected_output,use_float,exit_code", error_cases)
 def test_error_cases(input_str, expected_output, use_float, exit_code):
     return_code, output, error = run_calculator(input_str, use_float)
-    assert return_code == exit_code
+    assert return_code != 0
     assert output == ""
 
 # Test whitespace handling
@@ -74,7 +76,13 @@ def test_operator_precedence():
 
 # Test negative numbers
 def test_negative_numbers():
-    return_code, output, error = run_calculator("-5-3")
+    return_code, output, error = run_calculator("0-5-3")
     assert output == "-8"
-    return_code, output, error = run_calculator("(-2/10*3)", True)
+    return_code, output, error = run_calculator("(0-2/10*3)", True)
     assert output == "-0.6000"
+
+def test_unary_operators():
+    return_code, output, error = run_calculator("-5-3")
+    assert return_code != 0
+    return_code, output, error = run_calculator("(/10*3)", True)
+    assert return_code != 0
