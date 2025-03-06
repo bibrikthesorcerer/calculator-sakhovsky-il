@@ -27,6 +27,27 @@ class CalcManager:
         self.mode_flag = FLOAT_FLAG if float_mode else INT_FLAG
         # convert str to bytes to pipe in stdin
         self.input_data = input_data.encode("utf-8")
+        if not self._ensure_bin():
+            raise Exception("Server cannot access or build app binary")
+    
+    def _ensure_bin(self) -> bool:
+        # check if built binary exists
+        if os.path.isfile('./build/app.exe'):
+            print("Found built binary")
+            return True
+        # try to build from make if make exists
+        if os.path.isfile('./Makefile'):
+            print("Found Makefile")
+            run_res = subprocess.run(["make", APP_NAME])
+            if run_res.returncode == 0:
+                print("Built binary using make")
+                return True
+            else:
+                print("Build crashed")
+                return False
+        #  binary and Makefile are not present in fs
+        print("Binary and Makefile are not present in fs")
+        return False
 
     def run_app(self) -> tuple[int, str]:
         app_process = subprocess.Popen(
