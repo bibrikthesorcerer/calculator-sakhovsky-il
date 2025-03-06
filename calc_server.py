@@ -1,11 +1,47 @@
+import os
 import json
 import argparse
+import subprocess
 from typing import Any
 from http import HTTPStatus
 from http.server import HTTPServer
 from functools import cached_property
 from http.server import BaseHTTPRequestHandler
 from urllib.parse import parse_qsl, urlparse, ParseResult
+
+APP_NAME = "./build/app.exe"
+FLOAT_FLAG = "--float"
+INT_FLAG = ""
+
+
+class CalcManager:
+    """
+    Helper class which handles building and running calculator application
+
+    Parameters
+    ----------
+        float_mode (bool): whether to run calc in FLOAT_MODE
+        input_data (str): arithmetic expression passed for app to evaluate
+    """
+    def __init__(self, float_mode: bool, input_data: str):
+        self.mode_flag = FLOAT_FLAG if float_mode else INT_FLAG
+        # convert str to bytes to pipe in stdin
+        self.input_data = input_data.encode("utf-8")
+
+    def run_app(self) -> tuple[int, str]:
+        app_process = subprocess.Popen(
+            [APP_NAME, self.mode_flag],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        stdout, stderr = app_process.communicate(input=self.input_data)
+        # process returns data in bytes - decode 'em and strip \n
+        output = stdout.decode("utf-8").strip()
+        if app_process.returncode != 0:
+            raise Exception(f"Calculator application exited with code {app_process.returncode}")
+        self.result = output
+        return self.result
 
 
 class CalculatorRequestHandler(BaseHTTPRequestHandler):
@@ -75,7 +111,6 @@ class CalculatorRequestHandler(BaseHTTPRequestHandler):
             )
         
         return (float_mode, input_data)
-
 
     def _calc_post_response(self) -> tuple[int, bytes]:
         # validate input
