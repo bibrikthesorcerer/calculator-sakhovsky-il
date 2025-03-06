@@ -1,14 +1,49 @@
+import json
 import argparse
+from typing import Any
 from http.server import HTTPServer
 from functools import cached_property
 from http.server import BaseHTTPRequestHandler
+from urllib.parse import parse_qsl, urlparse, ParseResult
+
 
 class CalculatorRequestHandler(BaseHTTPRequestHandler):
     """
     Custom handler for web requests used by HTTPServer.  
     Handles Calculator-related requests
     """
-    pass
+    @cached_property
+    def url(self) -> ParseResult:
+        return urlparse(self.path)
+ 
+    @cached_property
+    def query_data(self) -> dict[str, Any]:
+        return dict(parse_qsl(self.url.query))
+
+    @cached_property
+    def post_data(self) -> bytes:
+        content_length = int(self.headers.get("Content-Length", 0))
+        return self.rfile.read(content_length)
+    
+    def _send_json_response(self, resp_code, resp_body):
+        # add response code and headers to header buffer
+        self.send_response(resp_code)
+        self.send_header("Content-Type", "application/json")
+        self.end_headers()
+        # write response to output stream
+        self.wfile.write(resp_body)
+
+    def do_POST(self):
+        resp_dict = dict()
+        if self.url.path:
+            resp_dict["path"] = self.url.path
+        if self.query_data:
+            resp_dict["query"] = self.query_data
+        if self.post_data:
+            resp_dict["requestBody"] = self.post_data.decode("utf-8")
+        
+        resp_body = json.dumps(resp_dict)
+        self._send_json_response(200, resp_body.encode("utf-8"))
 
 
 def parse_args() -> argparse.Namespace:
