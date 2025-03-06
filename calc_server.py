@@ -13,6 +13,16 @@ class CalculatorRequestHandler(BaseHTTPRequestHandler):
     Custom handler for web requests used by HTTPServer.  
     Handles Calculator-related requests
     """
+    def _url_dispatcher(self, path: str) -> object:
+        router = {
+            "/calc" : self._calc_post_response,
+        }
+        route_handler = router.get(path, self._404_handler)
+        return route_handler
+    
+    def _404_handler(self) -> tuple[int, bytes]:
+        return (404, self._make_error_body("Not Found"))
+
     @cached_property
     def url(self) -> ParseResult:
         return urlparse(self.path)
@@ -98,7 +108,8 @@ class CalculatorRequestHandler(BaseHTTPRequestHandler):
         self.wfile.write(resp_body)
 
     def do_POST(self):
-        resp_code, resp_body = self._calc_post_response()
+        route_handler = self._url_dispatcher(self.url.path)
+        resp_code, resp_body = route_handler()
         self._send_json_response(resp_code, resp_body)
 
 
