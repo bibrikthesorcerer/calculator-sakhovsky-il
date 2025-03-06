@@ -1,8 +1,9 @@
 import os
 import json
+import logging
 import argparse
-import subprocess
 import structlog
+import subprocess
 from typing import Any
 from http import HTTPStatus
 from http.server import HTTPServer
@@ -17,19 +18,42 @@ FLOAT_MODE = (FLOAT_FLAG, "FLOAT")
 INT_MODE = (INT_FLAG, "INT")
 
 def configure_logging():
+    """Configures console and json output using structlog and logging"""
+    # common processors for both outputs
+    common_processors = [
+        structlog.stdlib.add_log_level,
+        structlog.processors.TimeStamper(fmt="iso"), # timestamps
+        structlog.processors.StackInfoRenderer(), # stack dumps
+        structlog.processors.format_exc_info, # exception info
+        structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
+    ]
+
+    # structlog config
     structlog.configure(
-        processors=[structlog.stdlib.add_log_level,
-                    structlog.processors.TimeStamper(fmt="iso"), # timestamps
-                    structlog.processors.StackInfoRenderer(), # stack dumps
-                    structlog.processors.format_exc_info, # exception info
-                    structlog.dev.ConsoleRenderer(colors=True)
-                    ],
-        context_class=dict,
-        logger_factory=structlog.PrintLoggerFactory(),
-        wrapper_class=structlog.BoundLogger,
+        processors=common_processors,
+        logger_factory=structlog.stdlib.LoggerFactory(),
         cache_logger_on_first_use=True,
     )
-    
+
+    # logger from logging
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.INFO)
+
+    # create Console log Handler
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(structlog.stdlib.ProcessorFormatter(
+        processor=structlog.dev.ConsoleRenderer(colors=True),
+    ))
+
+    # create JSON log Handler
+    file_handler = logging.FileHandler("calc_server.log")
+    file_handler.setFormatter(structlog.stdlib.ProcessorFormatter(
+        processor=structlog.processors.JSONRenderer(),
+    ))
+
+    # add both handlers to standart logger
+    root_logger.addHandler(console_handler)
+    root_logger.addHandler(file_handler)  
 
 # init logging
 configure_logging()
