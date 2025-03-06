@@ -7,4 +7,4 @@ build/
 googletest/
 venv/
 .pytest_cache/
-tests/integration/__pycache__/
+*__pycache__/

@@ -37,7 +37,10 @@ PIP = $(VENV)/bin/pip
 INT_TEST_DIR = tests/integration
 INT_TESTS = $(INT_TEST_DIR)/tests.py
 
-.PHONY: all clean run-app run-unit-test format venv run-integration-tests
+# Server
+SERVER = calc_server
+
+.PHONY: all clean run-app run-unit-test format venv run-integration-tests run-server
 
 all: $(APP_EXE) $(TEST_EXE)
 
@@ -98,3 +101,7 @@ $(VENV):
 run-integration-tests: $(VENV) $(APP_EXE)
 	@. venv/bin/activate
 	@pytest $(INT_TESTS)
+	@deactivate
+
+run-server: $(APP_EXE)
+	@python -m $(SERVER)
