@@ -2,6 +2,7 @@ import os
 import json
 import argparse
 import subprocess
+import structlog
 from typing import Any
 from http import HTTPStatus
 from http.server import HTTPServer
@@ -12,6 +13,27 @@ from urllib.parse import parse_qsl, urlparse, ParseResult
 APP_NAME = "./build/app.exe"
 FLOAT_FLAG = "--float"
 INT_FLAG = ""
+FLOAT_MODE = (FLOAT_FLAG, "FLOAT")
+INT_MODE = (INT_FLAG, "INT")
+
+def configure_logging():
+    structlog.configure(
+        processors=[structlog.stdlib.add_log_level,
+                    structlog.processors.TimeStamper(fmt="iso"), # timestamps
+                    structlog.processors.StackInfoRenderer(), # stack dumps
+                    structlog.processors.format_exc_info, # exception info
+                    structlog.dev.ConsoleRenderer(colors=True)
+                    ],
+        context_class=dict,
+        logger_factory=structlog.PrintLoggerFactory(),
+        wrapper_class=structlog.BoundLogger,
+        cache_logger_on_first_use=True,
+    )
+    
+
+# init logging
+configure_logging()
+logger = structlog.get_logger()
 
 
 class CalcManager:
@@ -24,7 +46,7 @@ class CalcManager:
         input_data (str): arithmetic expression passed for app to evaluate
     """
     def __init__(self, float_mode: bool, input_data: str):
-        self.mode_flag = FLOAT_FLAG if float_mode else INT_FLAG
+        self.mode_flag, self.mode_str = FLOAT_MODE if float_mode else INT_MODE
         # convert str to bytes to pipe in stdin
         self.input_data = input_data.encode("utf-8")
         if not self._ensure_bin():
@@ -33,23 +55,24 @@ class CalcManager:
     def _ensure_bin(self) -> bool:
         # check if built binary exists
         if os.path.isfile('./build/app.exe'):
-            print("Found built binary")
+            logger.info("Binary found in filesystem")
             return True
         # try to build from make if make exists
         if os.path.isfile('./Makefile'):
-            print("Found Makefile")
+            logger.info("Makefile found, attempting to build binary")
             run_res = subprocess.run(["make", APP_NAME])
             if run_res.returncode == 0:
-                print("Built binary using make")
+                logger.info("Binary built successfully")
                 return True
             else:
-                print("Build crashed")
+                logger.error("Failed to build binary")
                 return False
         #  binary and Makefile are not present in fs
-        print("Binary and Makefile are not present in fs")
+        logger.error("Binary and Makefile not found in filesystem")
         return False
 
     def run_app(self) -> tuple[int, str]:
+        logger.info("Running calculator application", mode=self.mode_str)
         app_process = subprocess.Popen(
             [APP_NAME, self.mode_flag],
             stdin=subprocess.PIPE,
@@ -62,6 +85,7 @@ class CalcManager:
         if app_process.returncode != 0:
             raise Exception(f"Calculator application exited with code {app_process.returncode}")
         self.result = output
+        logger.info("Calculator application finished with exit code 0", output=output)
         return self.result
 
 
@@ -93,11 +117,15 @@ class CalculatorRequestHandler(BaseHTTPRequestHandler):
         content_length = int(self.headers.get("Content-Length", 0))
         return self.rfile.read(content_length)
     
+    def log_request(self, code = "-", size = "-") -> None:
+        logger.info(f"{self.command} request handled", path=self.url.path, client=self.client_address)
+
     def _make_error_body(self, msg: str, **kwargs) -> bytes:
         response_body = json.dumps({
                 "error": msg,
                 **kwargs
             })
+        logger.error("An error occured", path=self.url.path, error=msg, **kwargs)
         return response_body.encode("utf-8")
     
     def _validate_request(self) -> bool | tuple[bool, str]:
@@ -148,7 +176,7 @@ class CalculatorRequestHandler(BaseHTTPRequestHandler):
         except Exception as e:
             return (HTTPStatus.INTERNAL_SERVER_ERROR.value, 
                     self._make_error_body(
-                        e.args,
+                        e.args[0], # CalcManager exceptions contain only error message
                         input=self.post_data.decode("utf-8"),
                     ))
         
@@ -164,6 +192,7 @@ class CalculatorRequestHandler(BaseHTTPRequestHandler):
         self.wfile.write(resp_body)
 
     def do_POST(self):
+        logger.info(f"Incoming {self.command} request", path=self.url.path, client=self.client_address)
         route_handler = self._url_dispatcher(self.url.path)
         resp_code, resp_body = route_handler()
         self._send_json_response(resp_code, resp_body)
@@ -183,21 +212,23 @@ def parse_args() -> argparse.Namespace:
 def run_calc_server(address: str, port: int):
     # init server
     try:
+        logger.info("Starting server", address=address, port=port)
         server = HTTPServer((address, port), CalculatorRequestHandler)
     except Exception as e:
-        print(f"Server initialization Error! {str(e)}")
+        logger.error("Server initialization error!", error=str(e))
         exit(1)
     
     # run server
     try:
-        print(f"Server is up on {address}:{port}")
+        logger.info("Server is up on", address=address, port=port)
         server.serve_forever()
     except KeyboardInterrupt:
-        print("Received shutdown signal")
+       logger.info("Server recieved shutdown signal")
+    except Exception as e:
+        logger.error("Server error!", error=str(e))
     finally:
         server.server_close()
-        print("Server is down!")
-
+        logger.info("Server closed")
 
 if __name__ == "__main__":
     args = parse_args()
