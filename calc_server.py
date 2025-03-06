@@ -119,20 +119,20 @@ class CalculatorRequestHandler(BaseHTTPRequestHandler):
         except Exception as e:
             return e.args
         
-        resp_dict = {
-            "validated_mode": float_mode,
-            "validated_input": input_data
-        }
-        if self.url.path:
-            resp_dict["path"] = self.url.path
-        if self.query_data:
-            resp_dict["query"] = self.query_data
-        if self.post_data:
-            resp_dict["requestBody"] = self.post_data.decode("utf-8")
+        # create CalcManager and ensure binary is present in fs
+        try:
+            app = CalcManager(float_mode, input_data)
+            # run app and get output from piped stdout
+            output = app.run_app()
+        except Exception as e:
+            return (HTTPStatus.INTERNAL_SERVER_ERROR.value, 
+                    self._make_error_body(
+                        e.args,
+                        input=self.post_data.decode("utf-8"),
+                    ))
         
-        resp_body = json.dumps(resp_dict)
-
-        return (HTTPStatus.OK.value, resp_body.encode("utf-8"))
+        response_body = json.dumps(output)
+        return (HTTPStatus.OK.value, response_body.encode("utf-8"))
         
     def _send_json_response(self, resp_code: int, resp_body: bytes):
         # add response code and headers to header buffer
