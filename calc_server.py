@@ -168,6 +168,7 @@ class CalculatorRequestHandler(BaseHTTPRequestHandler):
                 HTTPStatus.BAD_REQUEST.value,
                 self._make_error_body("Incorrect float value")
             )
+        float_mode = False if float_mode == "false" else True
         
         # requestBody data validation
         if not self.post_data:
