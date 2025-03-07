@@ -32,7 +32,6 @@ CLANG_FORMAT = clang-format
 
 # Python integration tests
 VENV = venv
-PYTHON = $(VENV)/bin/python
 PIP = $(VENV)/bin/pip
 INT_TEST_DIR = tests/integration
 INT_TESTS = $(INT_TEST_DIR)/tests.py
@@ -94,7 +93,7 @@ format:
 	\) -exec $(CLANG_FORMAT) -i -style=file {} +
 
 $(VENV):
-	@python -m venv $(VENV)
+	@python3 -m venv $(VENV)
 	@$(PIP) install --upgrade pip
 	@$(PIP) show pytest >/dev/null 2>&1 || $(PIP) install pytest
 	@$(PIP) show structlog >/dev/null 2>&1 || $(PIP) install structlog
@@ -106,5 +105,5 @@ run-integration-tests: $(VENV) $(APP_EXE)
 
 run-server: $(VENV) $(APP_EXE)
 	@. venv/bin/activate && \
-	python -m $(SERVER) && \
+	python3 -m $(SERVER) && \
 	deactivate
