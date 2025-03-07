@@ -94,17 +94,17 @@ format:
 	\) -exec $(CLANG_FORMAT) -i -style=file {} +
 
 $(VENV):
-	@python3 -m venv $(VENV)
+	@python -m venv $(VENV)
 	@$(PIP) install --upgrade pip
-	@$(PIP) list | grep -q pytest || $(PIP) install pytest
-	@$(PIP) list | grep -q structlog || $(PIP) install structlog
+	@$(PIP) show pytest >/dev/null 2>&1 || $(PIP) install pytest
+	@$(PIP) show structlog >/dev/null 2>&1 || $(PIP) install structlog
 
 run-integration-tests: $(VENV) $(APP_EXE)
-	@. venv/bin/activate
-	@pytest $(INT_TESTS)
-	@deactivate
+	@. venv/bin/activate && \
+	pytest $(INT_TESTS) && \
+	deactivate
 
 run-server: $(VENV) $(APP_EXE)
-	@. venv/bin/activate
-	@python -m $(SERVER)
-	@deactivate
+	@. venv/bin/activate && \
+	python -m $(SERVER) && \
+	deactivate
