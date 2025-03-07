@@ -81,6 +81,7 @@ void validate_and_strip_input(char* buffer)
     *new = 0; // add \0
 
     if (parenthesis != 0) exit(4);
+    if (prev_char_was_operator) exit(3);
 }
 
 // retrieves either next number or result of calculated expression in parenthesis
