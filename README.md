@@ -18,6 +18,8 @@ FLOAT_MODE:
     5/2 = 2.5
 ```
 
+This program is also capable of running a server that can process certain types of POST requests.
+
 ## Building on your machine
 
 To build this program You need a **C compiler** such as [gcc](https://en.wikipedia.org/wiki/GNU_Compiler_Collection), [clang](https://en.wikipedia.org/wiki/Clang), etc.  
@@ -36,6 +38,7 @@ make run-int        # to run app.exe
 make run-float      # to run app.exe --float
 make run-unit-test  # to run unit-tests.exe
 make format         # to format .cpp .c .h files using WebKit style
+make run-server     # to run the calc_server.py
 ```
 All build artifacts are stored in `build/` directory
 
@@ -111,3 +114,63 @@ I've added exit codes to the app.
 | Division by a number less than `0.0001` in `FLOAT_MODE`  | 2  |
 | Invalid input symbol | 3 |
 | Not closed parenthesis | 4 |
+
+## Repository Update Report
+
+### SAT-1
+
+The following functions have been implemented:
+- Functionality for creating (launching) a server.
+- Functionality for receiving POST requests by the server.
+- The ability to run the server at a pre-specified address and port.
+- Returning a base 200 response to any incoming POST request.
+
+### SAT-2
+
+`Content-type`, `query`, and `requestBody` verification has been added.
+
+### SAT-3
+
+Basic routing has been added, which includes a `/calc` endpoint and a `404` handler.
+
+### SAT-4
+
+The following functionality has been added:
+- The class that is responsible for launching the calculator application.
+- Interaction between the server and the written class.
+
+The server uses the class to run the application using the received input data.
+
+### SAT-5
+
+Functionality has been added for checking and, if necessary, compiling the application.
+
+### SAT-6
+
+The **Makefile** has been updated to add the `"run-server"` command to run the server. (Thanks, Cap)
+
+### SAT-9
+
+Support for the `structlog` module in venv has been added, and the `"run-server"` command has been wrapped in venv.
+
+### SAT-7
+
+Console logging using structlog has been added, which includes:
+- Logging levels (INFO, ERROR, etc.).
+- Information about the time and date of logging in the ISO-8601 format.
+- Information about unhandled exceptions.
+
+### SAT-8
+
+Parallel logging in `JSON` format has been added. The received logs are written to a file with the *`.log`* extension.
+
+### SAT-10
+
+The `venv` and the `run-server` command in the **Makefile** were fixed.
+
+### SAT-11
+
+The following changes have been made:
+- python in the Makefile has been replaced with python3 for compatibility with Ubuntu
+- Fixed a bug when parsing float_mode from a POST request sent to the server
+- Fixed an error when processing arithmetic expressions ending with an operation
