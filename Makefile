@@ -35,6 +35,7 @@ VENV = venv
 PIP = $(VENV)/bin/pip
 INT_TEST_DIR = tests/integration
 INT_TESTS = $(INT_TEST_DIR)/tests.py
+INT_TESTS_SERVER = $(INT_TEST_DIR)/tests_server.py
 
 # Server
 SERVER = calc_server
@@ -101,6 +102,7 @@ $(VENV):
 run-integration-tests: $(VENV) $(APP_EXE)
 	@. venv/bin/activate && \
 	pytest $(INT_TESTS) && \
+	pytest $(INT_TESTS_SERVER) && \
 	deactivate
 
 run-server: $(VENV) $(APP_EXE)
