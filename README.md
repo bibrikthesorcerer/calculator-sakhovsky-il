@@ -174,3 +174,7 @@ The following changes have been made:
 - python in the Makefile has been replaced with python3 for compatibility with Ubuntu
 - Fixed a bug when parsing float_mode from a POST request sent to the server
 - Fixed an error when processing arithmetic expressions ending with an operation
+
+### SAT-12
+
+`Integration tests` have been added to verify the server's health, and the **Makefile** has been updated to perform both regular and server `integration tests`.
