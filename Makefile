@@ -96,8 +96,7 @@ format:
 $(VENV):
 	@python3 -m venv $(VENV)
 	@$(PIP) install --upgrade pip
-	@$(PIP) show pytest >/dev/null 2>&1 || $(PIP) install pytest
-	@$(PIP) show structlog >/dev/null 2>&1 || $(PIP) install structlog
+	@$(PIP) install -r requirements.txt
 
 run-integration-tests: $(VENV) $(APP_EXE)
 	@. venv/bin/activate && \

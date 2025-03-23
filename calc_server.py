@@ -191,7 +191,10 @@ class CalculatorRequestHandler(BaseHTTPRequestHandler):
         try:
             float_mode, input_data = self._validate_request()
         except Exception as e:
-            return e.args
+            return (HTTPStatus.INTERNAL_SERVER_ERROR.value, 
+                    self._make_error_body(
+                        str(e),
+                    ))
         
         # create CalcManager and ensure binary is present in fs
         try:
