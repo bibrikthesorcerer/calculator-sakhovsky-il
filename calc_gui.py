@@ -3,7 +3,7 @@ import json
 import logging
 import http.client
 from PySide6.QtWidgets import QApplication, QWidget, QSizePolicy
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QRegularExpression, QTimer
 from PySide6.QtWidgets import (
     QApplication, QWidget,
     QVBoxLayout, QHBoxLayout,
@@ -22,6 +22,9 @@ class CalcApp(QApplication):
 class CalcWindow(QWidget):
     def __init__(self):
         super().__init__()
+        self.cooldown = 2000
+        self.max_input_size = 1024
+        self.expression_regex = QRegularExpression(r"[^0-9+\-*/\s()]")
         self._init_ui()
         self.http_sender = HTTPSender()
 
@@ -110,9 +113,29 @@ class CalcWindow(QWidget):
         self.feedback_label.setText("Enter an arithmetic expression")
         self.feedback_label.setStyleSheet("color: black;")
 
+    def _cooldown_start_event_handler(self):
+        self.send_button.setEnabled(False)
+        self.expression_input.setEnabled(False)
+        self.float_mode_checkbox.setEnabled(False)
+    
+    def _cooldown_end_event_handler(self):
+        self.send_button.setEnabled(True)
+        self.expression_input.setEnabled(True)
+        self.float_mode_checkbox.setEnabled(True)
+        self._reset_feedback()
+
     def _send_evaluate_request(self):      
-        # parse request
+        # validate the expression
         expression = self.expression_input.toPlainText()
+        if len(expression) > self.max_input_size \
+            or self.expression_regex.match(expression).hasMatch():
+            self._set_feedback("Invalid arithmetic expression")
+            return
+        
+        # disable button to prevent spam
+        self._cooldown_start_event_handler()
+        
+        # proceed with request
         float_mode = self.float_mode_checkbox.isChecked()
         try:
             status, body = self.http_sender.send_and_receive(
@@ -128,6 +151,9 @@ class CalcWindow(QWidget):
                 self._set_feedback(f"Error {status}")
         except HTTPSenderError as e:
             self._set_feedback(f"Sender Error: {str(e)}")
+        
+        # set timer to enable button
+        QTimer.singleShot(self.cooldown, self._cooldown_end_event_handler)
 
     
 class HTTPSenderError(Exception):
