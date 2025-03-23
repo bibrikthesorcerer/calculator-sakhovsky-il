@@ -296,6 +296,7 @@ class AppFSM:
         # magic parameters
         self.retry_max_attempts = 10
         self.retry_base_delay = 256
+        self.retry_loop_cooldown = 5000
         self.http_sender = HTTPSender()
         self.window = window
         self.state = self.States.RESPONSE_WAIT
@@ -317,7 +318,10 @@ class AppFSM:
         if self.state != self.States.INPUT_WAIT:
             logger.error("FSM: Not ready to send. Waiting for previous response.")
             return
+        else:
+            self._send_request()
 
+    def _send_request(self):
         expression = self.window.expression_input.text()
         expression = re.sub(r"\s", "", expression)
         # validate expression
@@ -345,37 +349,46 @@ class AppFSM:
                 self.window.show_feedback("Success", "lime")
             else:
                 self.window.show_feedback(f"Error {status}", "red")
+            # Use a cooldown timer before re-enabling input.
+            QTimer.singleShot(self.window.cooldown, self.transition_to_input_wait)
         except HTTPSenderError as e:
-            self.window.show_feedback(f"Sender Error: {str(e)}", "red")
-            self.check_server_connection()
+            self.check_server_connection(success_callback=self._send_request)
         
-        # Use a cooldown timer before re-enabling input.
-        QTimer.singleShot(self.window.cooldown, self.transition_to_input_wait)
-
-    def check_server_connection(self):
+    def check_server_connection(self, success_callback=None):
         if self.state != self.States.RESPONSE_WAIT:
-            logger.error("FSM: Waiting for user input")
+            logger.error("FSM: Cannot send request. Waiting for user input.")
+            return
         try:
             self.http_sender.check_connection()
             self.window.connection_success.emit()
-            self.transition_to_input_wait()
+            if success_callback:
+                success_callback()
+            else:
+                self.transition_to_input_wait()
         except HTTPSenderError as e:
             self.window.init_retry_progress_bar()
             # enter retry loop
-            self._retry_connect_to_server(0)
+            self._retry_connect_to_server(0, success_callback)
     
-    def _retry_connect_to_server(self, attempts):
+    def _retry_connect_to_server(self, attempts, success_callback=None):
+        if self.state != self.States.RESPONSE_WAIT:
+            logger.error("FSM: Cannot send request. Waiting for user input.")
+            return
         try: 
             self.http_sender.check_connection()
             # exit retry loop
             self.window.connection_success.emit()
-            self.transition_to_input_wait()
+            if success_callback:
+                success_callback()
+            else:
+                self.transition_to_input_wait()
         except Exception as e:
             attempts += 1
             if attempts > self.retry_max_attempts:
                 self.window.connection_failure.emit(
-                    f"Unable to reach server after {self.retry_max_attempts} attempts"
+                    f"Unable to reach server. Retry in 5sec."
                 )
+                QTimer.singleShot(self.retry_loop_cooldown, lambda: self.check_server_connection(success_callback))
                 return
             # update gui
             self.window.set_server_status(f"Connection attempt #{attempts}", "orange")
@@ -386,7 +399,7 @@ class AppFSM:
             jitter = random.randint(100, 1000)
             delay = exp_delay+jitter
             logger.info(f"Retry #{attempts} delay:{delay}, base:{self.retry_base_delay}, exp:{exp_delay}, jitter:{jitter}")
-            QTimer.singleShot(delay, lambda: self._retry_connect_to_server(attempts))
+            QTimer.singleShot(delay, lambda: self._retry_connect_to_server(attempts, success_callback))
 
 
 if __name__ == '__main__':
