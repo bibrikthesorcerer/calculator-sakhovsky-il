@@ -40,7 +40,13 @@ INT_TESTS_SERVER = $(INT_TEST_DIR)/tests_server.py
 # Server
 SERVER = calc_server
 
-.PHONY: all clean run-app run-unit-test format venv run-integration-tests run-server
+# Docker
+IMAGE_NAME := calculator_server
+CONTAINER_NAME := calc_server_container
+DOCKER_PORT  := 8000
+HOST_PORT    := 8000
+
+.PHONY: all clean run-app run-unit-test format venv run-integration-tests run-server build-docker run-docker stop-docker clean-docker
 
 all: $(APP_EXE) $(TEST_EXE)
 
@@ -96,7 +102,7 @@ format:
 $(VENV):
 	@python3 -m venv $(VENV)
 	@$(PIP) install --upgrade pip
-	@$(PIP) install -r requirements.txt
+	@$(PIP) install --ignore-installed -r requirements.txt
 
 run-integration-tests: $(VENV) $(APP_EXE)
 	@. venv/bin/activate && \
@@ -108,3 +114,19 @@ run-server: $(VENV) $(APP_EXE)
 	@. venv/bin/activate && \
 	python3 -m $(SERVER) && \
 	deactivate
+
+build-docker:
+	@echo "Building Docker image $(IMAGE_NAME)..."
+	docker build -t $(IMAGE_NAME) .
+
+run-docker:
+	@echo "Running Docker container $(CONTAINER_NAME)..."
+	docker run --name $(CONTAINER_NAME) -p $(HOST_PORT):$(DOCKER_PORT) $(IMAGE_NAME)
+
+stop-docker:
+	@echo "Stopping Docker container $(CONTAINER_NAME)..."
+	docker stop $(CONTAINER_NAME) && docker rm $(CONTAINER_NAME)
+
+clean-docker:
+	@echo "Cleaning up Docker images..."
+	docker rmi $(IMAGE_NAME)

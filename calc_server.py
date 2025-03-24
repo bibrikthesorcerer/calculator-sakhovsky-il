@@ -121,12 +121,21 @@ class CalculatorRequestHandler(BaseHTTPRequestHandler):
     def _url_dispatcher(self, path: str) -> object:
         router = {
             "/calc" : self._calc_post_response,
+            "/health": self._healthcheck_handler
         }
         route_handler = router.get(path, self._404_handler)
         return route_handler
     
     def _404_handler(self) -> tuple[int, bytes]:
-        return (404, self._make_error_body("Not Found"))
+        return (HTTPStatus.NOT_FOUND, self._make_error_body("Not Found"))
+    
+    def _405_handler(self) -> tuple[int, bytes]:
+        return (HTTPStatus.METHOD_NOT_ALLOWED, self._make_error_body("Method Not Allowed"))
+    
+    def _healthcheck_handler(self) -> tuple[int, bytes]:
+        if self.command != "GET":
+            return self._405_handler()
+        return (HTTPStatus.OK, json.dumps("OK").encode("utf-8"))
 
     @cached_property
     def url(self) -> ParseResult:
@@ -187,14 +196,13 @@ class CalculatorRequestHandler(BaseHTTPRequestHandler):
         return (float_mode, input_data)
 
     def _calc_post_response(self) -> tuple[int, bytes]:
+        if self.command != "POST":
+            return self._405_handler()
         # validate input
         try:
             float_mode, input_data = self._validate_request()
         except Exception as e:
-            return (HTTPStatus.INTERNAL_SERVER_ERROR.value, 
-                    self._make_error_body(
-                        str(e),
-                    ))
+            return e.args
         
         # create CalcManager and ensure binary is present in fs
         try:
@@ -220,7 +228,13 @@ class CalculatorRequestHandler(BaseHTTPRequestHandler):
         self.wfile.write(resp_body)
 
     def do_POST(self):
-        logger.info(f"Incoming {self.command} request", path=self.url.path, client=self.client_address)
+        logger.info(f"Incoming POST request", path=self.url.path, client=self.client_address)
+        route_handler = self._url_dispatcher(self.url.path)
+        resp_code, resp_body = route_handler()
+        self._send_json_response(resp_code, resp_body)
+
+    def do_GET(self):
+        logger.info(f"Incoming GET request", path=self.url.path, client=self.client_address)
         route_handler = self._url_dispatcher(self.url.path)
         resp_code, resp_body = route_handler()
         self._send_json_response(resp_code, resp_body)

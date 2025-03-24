@@ -58,7 +58,12 @@ class HTTPSender:
         """Check if server is reachable"""
         self._init_connection()
         try:
-            self._connection.connect()
+            self._connection.request(HTTPSender.GET, "/health")
+            response = self._connection.getresponse()
+            status = response.status
+            response.close()
+            if status == 200:
+                logger.info("Healthcheck OK")
         except Exception as e:
             logger.error(f"Connection check failed: {e}")
             raise HTTPSenderError(f"Connection check failed: {e}")
@@ -351,7 +356,7 @@ class AppFSM:
                 self.window.show_feedback(f"Error {status}", "red")
             # Use a cooldown timer before re-enabling input.
             QTimer.singleShot(self.window.cooldown, self.transition_to_input_wait)
-        except HTTPSenderError as e:
+        except (HTTPSenderError, ConnectionError) as e:
             self.check_server_connection(success_callback=self._send_request)
         
     def check_server_connection(self, success_callback=None):
