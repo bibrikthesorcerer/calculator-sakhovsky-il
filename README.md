@@ -32,17 +32,16 @@ All sources are in `src/` folder so you can compile them yourself or use **Makef
 ### Makefile
 I've included **gcc-based Makefile** in repo, so you can use:
 ```bash
-make all            # to build program (app.exe) and unit tests (unit-tests.exe)
-make clean          # to clean build artifacts
-make run-int        # to run app.exe
-make run-float      # to run app.exe --float
-make run-unit-test  # to run unit-tests.exe
-make format         # to format .cpp .c .h files using WebKit style
-make run-server     # to run calc_server.py
-make build-docker   # to build Docker
-make run-docker     # to run Docker
-make stop-docker    # to stop Docker
-make clean-docker   # to clean Docker
+make all               # to build program (app.exe) and unit tests (unit-tests.exe)
+make clean             # to clean build artifacts
+make run-int           # to run app.exe
+make run-float         # to run app.exe --float
+make run-unit-test     # to run unit-tests.exe
+make format            # to format .cpp .c .h files using WebKit style
+make run-server        # to run app.exe and Docker
+make stop-server       # to stop Docker
+make run-server-python # to run calc_server.py
+make run-gui           # to run calc_gui.py
 ```
 All build artifacts are stored in `build/` directory
 
@@ -118,6 +117,10 @@ I've added exit codes to the app.
 | Division by a number less than `0.0001` in `FLOAT_MODE`  | 2  |
 | Invalid input symbol | 3 |
 | Not closed parenthesis | 4 |
+
+## Use-case diagram of FSM operation
+
+![alt text](https://github.com/bibrikthesorcerer/calculator-sakhovsky-il/blob/main/src/FSM 2.png?raw=true)
 
 ## Repository Update Report
 
@@ -204,3 +207,12 @@ The following functionality has been added:
 - Added a class that performs the role of FSM
 - Added a check for GUI connections to the server
 - Added Dockerfile support to Makefile for calculator program and server
+
+### SAT-23
+
+The following changes have been made to the Makefile:
+- Added GUI startup
+- The doker cleaning feature has been added to the clean command
+- A separate command has been issued to launch the python server
+- The run-server command launches docker and app.exe
+- Improved commands for working with the doсker
