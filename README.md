@@ -120,7 +120,7 @@ I've added exit codes to the app.
 
 ## Use-case diagram of FSM operation
 
-![alt text](https://github.com/bibrikthesorcerer/calculator-sakhovsky-il/blob/main/src/FSM 2.png?raw=true)
+![alt text](https://github.com/bibrikthesorcerer/calculator-sakhovsky-il/blob/main/src/FSM.png?raw=true)
 
 ## Repository Update Report
 
