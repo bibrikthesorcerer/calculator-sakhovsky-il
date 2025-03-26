@@ -38,7 +38,11 @@ make run-int        # to run app.exe
 make run-float      # to run app.exe --float
 make run-unit-test  # to run unit-tests.exe
 make format         # to format .cpp .c .h files using WebKit style
-make run-server     # to run the calc_server.py
+make run-server     # to run calc_server.py
+make build-docker   # to build Docker
+make run-docker     # to run Docker
+make stop-docker    # to stop Docker
+make clean-docker   # to clean Docker
 ```
 All build artifacts are stored in `build/` directory
 
@@ -178,3 +182,25 @@ The following changes have been made:
 ### SAT-12
 
 `Integration tests` have been added to verify the server's health, and the **Makefile** has been updated to perform both regular and server `integration tests`.
+
+### SAT-14, SAT-15, SAT-16
+
+A basic graphical interface with client-server interaction was implemented, namely:
+- A button to send data to the server
+- Fields for entering arithmetic expressions and outputting the answer
+- Checkbox for float mode
+
+Some minor fixes have also been made.
+
+### SAT-17, SAT-18
+
+The following changes have been added:
+- Basic validation of input data has been introduced
+- Introduced a 2-second delay of the GUI after sending the request
+
+### SAT-19, SAT-20, SAT-21
+
+The following functionality has been added:
+- Added a class that performs the role of FSM
+- Added a check for GUI connections to the server
+- Added Dockerfile support to Makefile for calculator program and server
