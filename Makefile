@@ -80,7 +80,7 @@ $(BUILD_DIR)/tests.o: $(UNIT_TESTS_DIR)/tests.cpp
 	@mkdir -p $(BUILD_DIR)
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
-clean:
+clean: clean-docker
 	rm -rf $(BUILD_DIR)
 
 run-int: $(APP_EXE)
@@ -110,23 +110,37 @@ run-integration-tests: $(VENV) $(APP_EXE)
 	pytest $(INT_TESTS_SERVER) && \
 	deactivate
 
-run-server: $(VENV) $(APP_EXE)
+run-server-python: $(VENV) $(APP_EXE)
 	@. venv/bin/activate && \
-	python3 -m $(SERVER) && \
+	python3 -m calc_server && \
 	deactivate
+
+run-server: $(APP_EXE) run-docker
+
+ensure-docker-image: Dockerfile
+	@if ! docker image inspect $(IMAGE_NAME) >/dev/null 2>&1; then \
+		$(MAKE) build-docker; \
+	else \
+		echo "Docker image $(IMAGE_NAME) already exists"; \
+	fi
 
 build-docker:
 	@echo "Building Docker image $(IMAGE_NAME)..."
 	docker build -t $(IMAGE_NAME) .
 
-run-docker:
+run-docker: ensure-docker-image
 	@echo "Running Docker container $(CONTAINER_NAME)..."
 	docker run --name $(CONTAINER_NAME) -p $(HOST_PORT):$(DOCKER_PORT) $(IMAGE_NAME)
 
-stop-docker:
+stop-server:
 	@echo "Stopping Docker container $(CONTAINER_NAME)..."
 	docker stop $(CONTAINER_NAME) && docker rm $(CONTAINER_NAME)
 
 clean-docker:
 	@echo "Cleaning up Docker images..."
 	docker rmi $(IMAGE_NAME)
+
+run-gui: $(VENV)
+	@. venv/bin/activate && \
+	python3 -m calc_gui && \
+	deactivate
