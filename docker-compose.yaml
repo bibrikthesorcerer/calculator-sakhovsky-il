@@ -1,0 +1,21 @@
+services:
+  web:
+    container_name: calc_server_container
+    build: .
+    ports:
+      - "8000:8000"
+    depends_on:
+      - redis
+    environment:
+      - REDIS_URL=redis://redis:6379
+    develop:
+      watch:
+        - action: sync
+          path: CalculatorApp
+          target: /CalculatorApp
+
+  redis:
+    container_name: calc_redis_container
+    image: "redis:alpine"
+    ports:
+      - "6380:6379" # host:container

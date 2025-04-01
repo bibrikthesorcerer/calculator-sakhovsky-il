@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -25,7 +26,7 @@ CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
-            "hosts": [("127.0.0.1", 6379)],
+            "hosts": [os.environ.get('REDIS_URL', 'redis://localhost:6379')],
         },
     },
 }
@@ -57,3 +58,50 @@ USE_TZ = False
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'standart': {
+            'format': '{levelname:8} [{asctime}] {name}: {message}',
+            'style': '{'
+        },
+    },
+    'handlers': {
+        'console': {
+            'level': 'DEBUG',
+            'formatter': 'standart',
+            'class': 'logging.StreamHandler',
+        },
+        'file': {
+            'level': 'DEBUG',
+            'formatter': 'standart',
+            'class': 'logging.FileHandler',
+            'filename': BASE_DIR/'calc-server.log',
+        }
+    },
+    'loggers': {
+        'daphne': {
+            'handlers': ['console', 'file'],
+            'level': 'DEBUG',
+            'propagate': False
+        },
+        'django.channels': {
+            'handlers': ['console', 'file'],
+            'level': 'ERROR',
+            'propagate': False
+        },
+        'django': {
+            'handlers': ['console', 'file'],
+            'level': 'INFO',
+            'propagate': True
+        },
+        'django.db.backends': {
+            'handlers': ['console', 'file'],
+            'level': 'DEBUG',
+            'propagate': False
+        },
+    },
+}

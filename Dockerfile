@@ -1,22 +1,18 @@
-FROM python:3.13-slim
+FROM python:3.13-alpine
 
 WORKDIR /calc_app
 
-# copy the requirements file first and install dependencies
-COPY requirements.txt .
-RUN pip install -r requirements.txt
-
-# install make
-RUN apt-get update && apt-get install -y build-essential
+RUN apk add --no-cache gcc g++ musl-dev linux-headers make
 
 COPY src/ src
 COPY tests/ tests
-COPY calc_server.py .
+COPY CalculatorApp/ CalculatorApp
 COPY Makefile .
 
 EXPOSE 8000
 
 ENV PYTHONUNBUFFERED=1
 
-# run server app via Makefile
+RUN make venv-server
+
 CMD ["make", "run-server-python"]

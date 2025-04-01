@@ -8,5 +8,5 @@ googletest/
 venv/
 .pytest_cache/
 *__pycache__/
-calc_server.log
+*.log
 *.sqlite3

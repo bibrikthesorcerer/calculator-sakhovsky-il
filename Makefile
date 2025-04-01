@@ -41,12 +41,12 @@ INT_TESTS_SERVER = $(INT_TEST_DIR)/tests_server.py
 SERVER = calc_server
 
 # Docker
-IMAGE_NAME := calculator_server
+IMAGE_NAME := calculator-sakhovsky-il-web
 CONTAINER_NAME := calc_server_container
 DOCKER_PORT  := 8000
 HOST_PORT    := 8000
 
-.PHONY: all clean run-app run-unit-test format venv run-integration-tests run-server build-docker run-docker stop-docker clean-docker
+.PHONY: all clean run-app run-unit-test format venv run-integration-tests run-server build-docker run-docker stop-docker clean-docker check-server-dependencies check-client-dependencies
 
 all: $(APP_EXE) $(TEST_EXE)
 
@@ -102,45 +102,94 @@ format:
 $(VENV):
 	@python3 -m venv $(VENV)
 	@$(PIP) install --upgrade pip
-	@$(PIP) install --ignore-installed -r requirements.txt
+	@$(MAKE) -s check-server-dependencies
+	@$(MAKE) -s check-client-dependencies
+	@$(MAKE) -s $(VENV)-testing
+	@$(PIP) check
 
-run-integration-tests: $(VENV) $(APP_EXE)
+$(VENV)-server:
+	@python3 -m venv $(VENV)
+	@$(PIP) install --upgrade pip
+	@$(MAKE) -s check-server-dependencies
+	@$(PIP) check
+
+$(VENV)-client:
+	@python3 -m venv $(VENV)
+	@$(PIP) install --upgrade pip
+	@$(MAKE) -s check-client-dependencies
+	@$(PIP) check
+
+$(VENV)-testing:
+	@python3 -m venv $(VENV)
+	@$(PIP) install --upgrade pip
+	@if ! $(PIP) show pytest >/dev/null 2>&1; then \
+		$(PIP) install pytest; \
+	fi
+	@$(PIP) check
+
+check-server-dependencies:
+	@if ! $(PIP) show django >/dev/null 2>&1; then \
+		$(PIP) install django; \
+	fi
+	@if ! $(PIP) show djangorestframework >/dev/null 2>&1; then \
+		$(PIP) install djangorestframework; \
+	fi
+	@if ! $(PIP) show channels >/dev/null 2>&1; then \
+		$(PIP) install channels; \
+	fi
+	@if ! $(PIP) show daphne >/dev/null 2>&1; then \
+		$(PIP) install daphne; \
+	fi
+	@if ! $(PIP) show channels_redis >/dev/null 2>&1; then \
+		$(PIP) install channels_redis; \
+	fi
+	@$(PIP) check
+
+check-client-dependencies:
+	@if ! $(PIP) show PySide6 >/dev/null 2>&1; then \
+		$(PIP) install PySide6; \
+	fi
+	@$(PIP) check
+
+run-integration-tests: $(VENV)-testing $(APP_EXE)
 	@. venv/bin/activate && \
 	pytest $(INT_TESTS) && \
 	pytest $(INT_TESTS_SERVER) && \
 	deactivate
 
-run-server-python: $(VENV) $(APP_EXE)
+run-server-python: $(VENV)-server $(APP_EXE)
 	@. venv/bin/activate && \
-	python3 -m calc_server && \
+	python3 CalculatorApp/manage.py runserver 0.0.0.0:8000 && \
 	deactivate
 
-run-server: $(APP_EXE) run-docker
+run-server:
+	docker compose up --watch
 
-ensure-docker-image: Dockerfile
-	@if ! docker image inspect $(IMAGE_NAME) >/dev/null 2>&1; then \
-		$(MAKE) build-docker; \
-	else \
-		echo "Docker image $(IMAGE_NAME) already exists"; \
-	fi
+# ensure-docker-image: Dockerfile
+# 	@if ! docker image inspect $(IMAGE_NAME) >/dev/null 2>&1; then \
+# 		$(MAKE) build-docker; \
+# 	else \
+# 		echo "Docker image $(IMAGE_NAME) already exists"; \
+# 	fi
 
-build-docker:
-	@echo "Building Docker image $(IMAGE_NAME)..."
-	docker build -t $(IMAGE_NAME) .
+# build-docker:
+# 	@echo "Building Docker image $(IMAGE_NAME)..."
+# 	docker build -t $(IMAGE_NAME) .
 
-run-docker: ensure-docker-image
-	@echo "Running Docker container $(CONTAINER_NAME)..."
-	docker run --name $(CONTAINER_NAME) -p $(HOST_PORT):$(DOCKER_PORT) $(IMAGE_NAME)
+# run-docker: ensure-docker-image
+# 	@echo "Running Docker container $(CONTAINER_NAME)..."
+# 	docker run --name $(CONTAINER_NAME) -p $(HOST_PORT):$(DOCKER_PORT) $(IMAGE_NAME)
+
 
 stop-server:
-	@echo "Stopping Docker container $(CONTAINER_NAME)..."
-	docker stop $(CONTAINER_NAME) && docker rm $(CONTAINER_NAME)
+	@echo "Stopping Docker containers $(CONTAINER_NAME)..."
+	docker compose down
 
 clean-docker:
 	@echo "Cleaning up Docker images..."
 	docker rmi $(IMAGE_NAME)
 
-run-gui: $(VENV)
+run-gui: $(VENV)-client
 	@. venv/bin/activate && \
-	python3 -m calc_gui && \
+	python3 -m client && \
 	deactivate

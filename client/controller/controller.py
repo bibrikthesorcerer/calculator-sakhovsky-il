@@ -41,8 +41,8 @@ class AppFSM:
         self.db_thread.start()
         
         # networking
-        self.http_sender = HTTPSender()
-        self.ws_client = WebSocketClient("ws://127.0.0.1:8000/ws/sync", self.history_manager)
+        self.http_sender = HTTPSender("0.0.0.0", 8000)
+        self.ws_client = WebSocketClient("ws://0.0.0.0:8000/ws/sync", self.history_manager)
         self.sync_thread = QThread()
         self.ws_client.moveToThread(self.sync_thread)
         self.sync_thread.started.connect(self.ws_client.connect_to_server) # init WS connection
