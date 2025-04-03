@@ -12,17 +12,17 @@ class WebSocketClient(QObject):
     connected = Signal()
     disconnected = Signal()
     error_occurred = Signal(str)
-
+    
     def __init__(self, url, db_manager):
         super().__init__()
         self.is_active = False
-        self.reconnect_interval = 5000 # ms
-        self.reconnect_timer = QTimer()
-        self.reconnect_timer.timeout.connect(self.connect_to_server)
+        self.reconnect_interval = 5000 # ms   
         self.db_manager = db_manager
-        self.url = QUrl(url)
-        
-    def _connect_signals(self):
+        self.url = QUrl(url)   
+        self.reconnect_timer = QTimer(self)
+        self.reconnect_timer.timeout.connect(self.connect_to_server)    
+
+    def _connect_signals(self):        
         self.ws.connected.connect(self._on_connected)
         self.ws.disconnected.connect(self._on_disconnected)
         self.ws.textMessageReceived.connect(self._on_message_received)
@@ -30,10 +30,11 @@ class WebSocketClient(QObject):
 
     def connect_to_server(self):
         """Initiate WebSocket connection"""
-        self.ws = QWebSocket()
+        self.ws = QWebSocket(parent=self)  
         self._connect_signals()
         self.is_active = True
         self.ws.open(self.url)
+    
 
     def close(self):
         """Graceful shutdown"""
@@ -42,6 +43,13 @@ class WebSocketClient(QObject):
         self.reconnect_timer.stop()
         if self.ws.state() == QAbstractSocket.ConnectedState:
             self.ws.close()
+
+    def reconnect(self):
+        if self.is_active:  # only reconnect if app is still active
+            logger.debug(f"WS: Reconnecting in {self.reconnect_interval}ms")
+            self.reconnect_timer.start(self.reconnect_interval)
+        else:
+            logger.debug("WS: Disconnected during shutdown")
 
     @Slot()
     def _on_connected(self):
@@ -56,11 +64,7 @@ class WebSocketClient(QObject):
     def _on_disconnected(self):
         """Handle connection loss"""
         self.disconnected.emit()
-        if self.is_active:  # only reconnect if app is still active
-            logger.debug(f"WS: Reconnecting in {self.reconnect_interval}ms")
-            self.reconnect_timer.start(self.reconnect_interval)
-        else:
-            logger.debug("WS: Disconnected during shutdown")
+        self.reconnect()
 
     @Slot(str)
     def _on_message_received(self, message):
@@ -79,6 +83,7 @@ class WebSocketClient(QObject):
         error_msg = self.ws.errorString()
         logging.error(f"WS: Error occured: {error_msg}")
         self.error_occurred.emit(f"WebSocket error: {error_msg}")
+        self.reconnect()
 
 
 class HTTPSenderError(Exception):
@@ -90,7 +95,7 @@ class HTTPSender:
     """A wrapper HTTP client class which handles communication with the server."""
     GET = "GET"
     POST = "POST"
-
+    
     def __init__(self, addr="0.0.0.0", port=8000):
         self.addr = addr
         self.port = port
@@ -155,11 +160,12 @@ class HTTPSender:
                 logger.error(f"HTTP: HTTP request error: {e}")
                 raise HTTPSenderError(f"HTTP request error: {e}")
 
-            response = self._connection.getresponse()
+            response = self._connection.getresponse()            
             status = response.status
             raw_body = response.read()
             response.close()
-
+            if (status != 200):
+                return(status,None)
             try:
                 decoded_body = raw_body.decode("utf-8")
                 parsed_body = json.loads(decoded_body)

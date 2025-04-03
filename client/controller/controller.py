@@ -2,7 +2,7 @@ import re
 import random
 import logging
 from PySide6.QtWidgets import QApplication
-from PySide6.QtCore import QTimer, QThread
+from PySide6.QtCore import QTimer, QThread, Slot
 from PySide6.QtWidgets import QApplication
 
 from client.controller.networking import WebSocketClient, HTTPSender, HTTPSenderError
@@ -30,7 +30,7 @@ class AppFSM:
         self.retry_max_attempts = 10
         self.retry_base_delay = 256
         self.retry_loop_cooldown = 5000
-        
+        self.is_server_reachable = True #иначе при первом запуске конфликтует с http реконектом
         # DB manager
         self.history_manager = DatabaseManager()
         self.history_manager.update_trigger.connect(self.window.refresh_local_data)
@@ -47,16 +47,32 @@ class AppFSM:
         self.ws_client.moveToThread(self.sync_thread)
         self.sync_thread.started.connect(self.ws_client.connect_to_server) # init WS connection
         self.sync_thread.finished.connect(self.ws_client.close)
+
+        self.ws_client.connected.connect(self._on_connect)
+        self.ws_client.disconnected.connect(self._on_disconnect)
+
         self.sync_thread.start()
         
         # init FSM state
         self.state = self.States.RESPONSE_WAIT
-
     
+    @Slot()
+    def _on_connect(self):
+        self.transition_to_input_wait()
+        self.window.connection_success.emit()
+        
+    @Slot()
+    def _on_disconnect(self):
+        self.transition_to_response_wait()        
+        if(self.is_server_reachable):
+            self.window.set_server_status("Connection failed.", "red") 
+
     def cleanup(self):
         logger.info("Got close signal, cleaning up")
         self.sync_thread.quit()
+        self.sync_thread.wait()
         self.db_thread.quit()
+        self.db_thread.wait()
         # overhead time for graceful close
         QTimer.singleShot(100, QApplication.quit)
 
@@ -137,11 +153,13 @@ class AppFSM:
             self.http_sender.check_connection()
             # exit retry loop
             self.window.connection_success.emit()
+            self.is_server_reachable = True
             if success_callback:
                 success_callback()
             else:
                 self.transition_to_input_wait()
         except Exception as e:
+            self.is_server_reachable = False
             attempts += 1
             if attempts > self.retry_max_attempts:
                 self.window.connection_failure.emit(
