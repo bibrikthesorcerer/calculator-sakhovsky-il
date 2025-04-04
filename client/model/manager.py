@@ -1,7 +1,6 @@
 import logging
 import sqlite3
-from queue import Queue, Empty
-from PySide6.QtCore import QMutex, QMutexLocker, QObject, Signal, Slot
+from PySide6.QtCore import QObject, Signal, Slot
 
 logger = logging.getLogger()
 
@@ -9,14 +8,12 @@ logger = logging.getLogger()
 class DatabaseManager(QObject):
     """SQLite3 manager class. Runs in separate thread and uses Queue and Mutex to ensure thread-safe operations"""
     update_trigger = Signal(list)  # signal to notify model of changes
-    operation_available = Signal() # signal for queue operations
+    operation_available = Signal(str, dict) # signal for queue operations
 
     def __init__(self):
         super().__init__()
-        self.operation_queue = Queue()
         self.running = True
-        self.mutex = QMutex()
-        self.operation_available.connect(self.process_queue)
+        self.operation_available.connect(self.process_request)
     
     def setup_database(self):
         """Connect to db and create history table if not present"""
@@ -32,32 +29,23 @@ class DatabaseManager(QObject):
         # initial UI
         self._emit_all_data()
 
-    def process_queue(self):
-        """Listen to Queue and perform requested operations"""
-        while True and self.running:
-            # pop data from queue
-            with QMutexLocker(self.mutex):
-                try:
-                    op_type, data = self.operation_queue.get(timeout=0.1)
-                except Empty:
-                    logger.debug("DB: Empty Queue, all operations proccessed")
-                    break
-
-            # process data from queue
-            try:
-                if op_type == 'insert':
-                    self._local_insert(data)
-                elif op_type == 'sync':
-                    self._sync_data(data)
-                logger.debug(f"DB: Executed {op_type}")
-            except Exception as e:
-                logger.error(f"DB: Operation failed: {e}")
-
     @Slot(str, dict)
+    def process_request(self, op_type, data):
+        """Perform requested operations"""
+        # process data from queue        
+        try:
+            if op_type == 'insert':
+                self._local_insert(data)
+            elif op_type == 'sync':
+                self._sync_data(data)
+            logger.debug(f"DB: Executed {op_type}")
+        except Exception as e:
+            logger.error(f"DB: Operation failed: {e}")
+
+    
     def enqueue_operation(self, op_type, data):
-        with QMutexLocker(self.mutex):
-            self.operation_queue.put((op_type, data))
-            self.operation_available.emit()
+        if self.running:
+            self.operation_available.emit(op_type, data)
 
     def _local_insert(self, data):
         """Insert new calculation result"""
