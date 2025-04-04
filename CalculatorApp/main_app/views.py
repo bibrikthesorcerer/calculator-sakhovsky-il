@@ -1,6 +1,6 @@
-import json
-from django.http import JsonResponse, HttpResponse, HttpResponseNotAllowed, HttpResponseServerError
+from django.http import JsonResponse, HttpResponse, HttpResponseNotAllowed, HttpResponseServerError, HttpResponseBadRequest
 
+from .utils import validate_request
 from .runner import CalcManager
 from .models import CalculatedResult
 from .serializers import CalculatedResultSerializer
@@ -13,9 +13,11 @@ async def healthcheck_view(request):
 async def calculate_view(request):
     if request.method != "POST":
         return HttpResponseNotAllowed()
-    float_mode = request.GET.get('float', 'false')
-    float_mode = True if float_mode == "true" else False
-    body = json.loads(request.body.decode('utf-8'))
+    try:
+        float_mode, body = await validate_request(request)        
+    except Exception as e:
+        print(e)
+        return HttpResponseBadRequest(e)
     # perform calculations
     try:
         runner = CalcManager(
@@ -34,3 +36,5 @@ async def calculate_view(request):
     except Exception as e:
         print(e)
         return HttpResponseServerError("Runtime error occured")
+    
+
