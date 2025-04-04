@@ -18,7 +18,7 @@ FLOAT_MODE:
     5/2 = 2.5
 ```
 
-This program is also capable of running a server that can process certain types of POST requests.
+The work with this program is carried out using a server and a `GUI` that acts as a client in this program.
 
 ## Building on your machine
 
@@ -27,7 +27,8 @@ To build this program You need a **C compiler** such as [gcc](https://en.wikiped
 
 You'll also need `git`, `cmake` and `make` if you want to run unit tests
 
-All sources are in `src/` folder so you can compile them yourself or use **Makefile**
+> [!IMPORTANT]
+> To run this program on your device, you will need `docker compose`. If you want to run this program outside of docker, then you will need `redis`.
 
 ### Makefile
 I've included **gcc-based Makefile** in repo, so you can use:
@@ -38,32 +39,25 @@ make run-int           # to run app.exe
 make run-float         # to run app.exe --float
 make run-unit-test     # to run unit-tests.exe
 make format            # to format .cpp .c .h files using WebKit style
-make run-server        # to run app.exe and Docker
-make stop-server       # to stop Docker
-make run-server-python # to run calc_server.py
-make run-gui           # to run calc_gui.py
+make run-server        # to run docker compose for the server
+make stop-server       # to stop docker compose for the server
+make run-server-python # to run server
+make run-gui           # to run client
 ```
-All build artifacts are stored in `build/` directory
 
 ## Running and using this program
 
-You can run this program via Makefile
+You can run this program via **Makefile**. First, run the command
 ```bash
-make run-int    # to run in INT_MODE
-make run-float  # to run in FLOAT_MODE
+make run-server # to run docker compose for the server
 ```
 
-Or straight from built .exe file
+Then, run the command
 ```bash
-./build/app.exe [--float]
+make run-gui    # to run client
 ```
 
-> [!IMPORTANT]
-> - Program expects user input in `stdin` until `EOF` is met  
-> - **To end input, type `EOF` symbol** *(use Ctrl+D in linux terminal)*
-> - You can also pipe input to program using `echo "2+3" | build/app.exe`
-
-Input is a string, containing **only**:
+The correct input, in the field intended for this in the `GUI`, contains **only**:
 - `0-9`  digits
 - `+`, `-`, `*`, `/` supported operations
 - `(`, `)` parenthesis
@@ -72,7 +66,7 @@ Input is a string, containing **only**:
 This program supports up to 1KiB of input data  
 Program assumes that all numbers are non-negative
 
-Program outputs single number representing evaluated expression in `stdout`
+The program returns the result of calculations to the prepared table in the `GUI`.
 
 ## How it's made
 
@@ -121,6 +115,26 @@ I've added exit codes to the app.
 ## Use-case diagram of FSM operation
 
 ![alt text](https://github.com/bibrikthesorcerer/calculator-sakhovsky-il/blob/main/media/FSM.png?raw=true)
+
+<p style="text-align: center;">Image 1. Use-case diagram of FSM operation</p>
+
+## Demonstration of the server operation
+
+The figures show the server operation scheme for a large number of clients.
+
+Random requests of varying complexity were received on the server, among which requests containing an error were specially added to find out how this would affect the efficiency of the server.
+
+![alt text](https://github.com/bibrikthesorcerer/calculator-sakhovsky-il/blob/main/media/40VU.png?raw=true)
+
+<p style="text-align: center;">Image 2. The scheme of the server with 40 virtual users</p>
+
+![alt text](https://github.com/bibrikthesorcerer/calculator-sakhovsky-il/blob/main/media/60VU.png?raw=true)
+
+<p style="text-align: center;">Image 3. The scheme of the server with 60 virtual users</p>
+
+![alt text](https://github.com/bibrikthesorcerer/calculator-sakhovsky-il/blob/main/media/80VU.png?raw=true)
+
+<p style="text-align: center;">Image 4. The scheme of the server with 80 virtual users</p>
 
 ## Repository Update Report
 
@@ -178,9 +192,9 @@ The `venv` and the `run-server` command in the **Makefile** were fixed.
 ### SAT-11
 
 The following changes have been made:
-- python in the Makefile has been replaced with python3 for compatibility with Ubuntu
-- Fixed a bug when parsing float_mode from a POST request sent to the server
-- Fixed an error when processing arithmetic expressions ending with an operation
+- python in the Makefile has been replaced with python3 for compatibility with Ubuntu.
+- Fixed a bug when parsing float_mode from a POST request sent to the server.
+- Fixed an error when processing arithmetic expressions ending with an operation.
 
 ### SAT-12
 
@@ -189,30 +203,77 @@ The following changes have been made:
 ### SAT-14, SAT-15, SAT-16
 
 A basic graphical interface with client-server interaction was implemented, namely:
-- A button to send data to the server
-- Fields for entering arithmetic expressions and outputting the answer
-- Checkbox for float mode
+- A button to send data to the server.
+- Fields for entering arithmetic expressions and outputting the answer.
+- Checkbox for float mode.
 
 Some minor fixes have also been made.
 
 ### SAT-17, SAT-18
 
 The following changes have been added:
-- Basic validation of input data has been introduced
-- Introduced a 2-second delay of the GUI after sending the request
+- Basic validation of input data has been introduced.
+- Introduced a 2-second delay of the GUI after sending the request.
 
 ### SAT-19, SAT-20, SAT-21
 
 The following functionality has been added:
-- Added a class that performs the role of FSM
-- Added a check for GUI connections to the server
-- Added Dockerfile support to Makefile for calculator program and server
+- Added a class that performs the role of FSM.
+- Added a check for GUI connections to the server.
+- Added Dockerfile support to Makefile for calculator program and server.
 
 ### SAT-23
 
 The following changes have been made to the Makefile:
-- Added GUI startup
-- The doker cleaning feature has been added to the clean command
-- A separate command has been issued to launch the python server
-- The run-server command launches docker and app.exe
-- Improved commands for working with the doсker
+- Added GUI startup.
+- The doker cleaning feature has been added to the clean command.
+- A separate command has been issued to launch the python server.
+- The run-server command launches docker and app.exe.
+- Improved commands for working with the doсker.
+
+### SAT-24
+
+A `Django` application with a basic `DB` configuration has been added, which allows you to save the calculation history on the server.
+
+### SAT-25, SAT-26, SAT-27, SAT-28
+
+The following functionality has been implemented:
+- The list of clients connected to the server.
+- PUSH server model that allows sending data to all connected clients.
+- Asynchronous server operation.
+- Sending the calculation history when the client connects to the server for the first time.
+
+### SAT-29, SAT-30
+
+The following changes have been made:
+
+- Added a data warehouse for the calculation history from the server in the GUI.
+- Added WS client to provide convenient two-way communication between GUI and server.
+- The client application has become modular and has been divided into subsections to ensure its continuous operation.
+
+### SAT-32, SAT-33, SAT-34
+
+The following changes have been made:
+- Added Logging on server.
+- Updated Makefile for correct launch of docker, server and GUI.
+- Added the docker-compose setting.
+- The working IP has been changed to 0.0.0.0.
+
+### SAT-31, SAT-37, SAT-39
+
+The following work was performed: 
+- Testing was conducted to identify errors and malfunctions in the program.
+- Fixed a bug that led to an endless loop of requests to the server in order to obtain the calculation result.
+- Improved the system for reconnecting the client to the server and checking the server health at the moment.
+
+### SAT-40
+
+The migration command was added to the **Makefile** to start the server.
+
+### SAT-36
+
+`Queues` were removed from the program and errors that periodically occurred at the end of the program were fixed.
+
+### SAT-38
+
+A data validation system has been added to the server.
