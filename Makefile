@@ -159,6 +159,7 @@ run-integration-tests: $(VENV)-testing $(APP_EXE)
 
 run-server-python: $(VENV)-server $(APP_EXE)
 	@. venv/bin/activate && \
+	python3 CalculatorApp/manage.py migrate && \
 	python3 CalculatorApp/manage.py runserver 0.0.0.0:8000 && \
 	deactivate
 
