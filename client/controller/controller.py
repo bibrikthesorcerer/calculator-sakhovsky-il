@@ -47,6 +47,7 @@ class AppFSM:
         self.db_thread.start()
         
         # networking
+        self.pending_request = None
         self.http_sender = HTTPSender("0.0.0.0", 8000)
         self.ws_client = WebSocketClient("ws://0.0.0.0:8000/ws/sync", self.history_manager)
         self.sync_thread = QThread()
@@ -64,14 +65,15 @@ class AppFSM:
     
     @Slot()
     def _on_connect(self):
-        self.transition_to_input_wait()
+        if self.pending_request is None:
+            self.transition_to_input_wait()
         self.window.connection_success.emit()
         
     @Slot()
     def _on_disconnect(self):
-        self.transition_to_response_wait()        
-        if(self.is_server_reachable):
-            self.window.set_server_status("Connection failed.", "red") 
+        self.transition_to_response_wait()
+        # if(self.is_server_reachable):
+        self.window.set_server_status("Connection failed.", "red") 
 
     def cleanup(self):
         logger.info("Got close signal, cleaning up")
@@ -83,12 +85,18 @@ class AppFSM:
         QTimer.singleShot(100, QApplication.quit)
 
     def transition_to_input_wait(self):
+        if self.state == self.States.INPUT_WAIT:
+            logger.warning("FSM: Already in INPUT_WAIT")
+            return
         logger.info("FSM: Transitioning to INPUT_WAIT")
         self.state = self.States.INPUT_WAIT
         if self.window:
             self.window.enable_inputs()
     
     def transition_to_response_wait(self):
+        if self.state == self.States.RESPONSE_WAIT:
+            logger.warning("FSM: Already in RESPONSE_WAIT")
+            return
         logger.info("FSM: Transitioning to RESPONSE_WAIT")
         self.state = self.States.RESPONSE_WAIT
         if self.window:
@@ -100,29 +108,35 @@ class AppFSM:
             logger.error("FSM: Not ready to send. Waiting for previous response.")
             return
         else:
+            expression = self.window.expression_input.text()
+            # validate expression
+            if not self.window.validate_expression(expression):
+                self.window.show_feedback("Invalid arithmetic expression", "red")
+                return
+            
+            # transition to response wait state
+            self.transition_to_response_wait()
+            # show feedback that processing is underway
+            self.window.show_feedback("Sending request...", "black")
+            
+            float_mode = self.window.float_mode_checkbox.isChecked()
+            float_param = "true" if float_mode else "false"
+            self.pending_request = {
+                "url":f"/calc?float={float_param}",
+                "expression": expression,
+            }
             self._send_request()
 
     def _send_request(self):
-        expression = self.window.expression_input.text()
-        # validate expression
-        if not self.window.validate_expression(expression):
-            self.window.show_feedback("Invalid arithmetic expression", "red")
-            return
-        
-        # transition to response wait state
-        self.transition_to_response_wait()
-        # show feedback that processing is underway
-        self.window.show_feedback("Sending request...", "black")
-        
-        float_mode = self.window.float_mode_checkbox.isChecked()
-        float_param = "true" if float_mode else "false"
         try:
             status, body = self.http_sender.send_and_receive(
                 HTTPSender.POST,
-                f"/calc?float={float_param}",
-                expression,
+                self.pending_request.get("url"),
+                self.pending_request.get("expression"),
                 {"Content-Type": "application/json"}
             )
+            # if got response, reset request
+            self.pending_request = None
             if status == 200 and body is not None:
                 # update db and ui
                 self._add_calculation_entry(body)
@@ -132,25 +146,25 @@ class AppFSM:
             # Use a cooldown timer before re-enabling input.
             QTimer.singleShot(self.window.cooldown, self.transition_to_input_wait)
         except (HTTPSenderError, ConnectionError) as e:
-            self.check_server_connection(success_callback=self._send_request)
+            self.check_server_connection()
         
-    def check_server_connection(self, success_callback=None):
+    def check_server_connection(self):
         if self.state != self.States.RESPONSE_WAIT:
             logger.error("FSM: Cannot send request. Waiting for user input.")
             return
         try:
             self.http_sender.check_connection()
             self.window.connection_success.emit()
-            if success_callback:
-                success_callback()
+            if self.pending_request is not None:
+                self._send_request()
             else:
                 self.transition_to_input_wait()
         except HTTPSenderError as e:
             self.window.init_retry_progress_bar()
             # enter retry loop
-            self._retry_connect_to_server(0, success_callback)
+            self._retry_connect_to_server(0)
     
-    def _retry_connect_to_server(self, attempts, success_callback=None):
+    def _retry_connect_to_server(self, attempts):
         if self.state != self.States.RESPONSE_WAIT:
             logger.error("FSM: Cannot send request. Waiting for user input.")
             return
@@ -158,19 +172,20 @@ class AppFSM:
             self.http_sender.check_connection()
             # exit retry loop
             self.window.connection_success.emit()
-            self.is_server_reachable = True
-            if success_callback:
-                success_callback()
+            # self.is_server_reachable = True
+            if self.pending_request is not None:
+                self._send_request()
             else:
                 self.transition_to_input_wait()
         except Exception as e:
-            self.is_server_reachable = False
+            logger.error(f"HTTPRETRY: {e.args}")
+            # self.is_server_reachable = False
             attempts += 1
             if attempts > self.retry_max_attempts:
                 self.window.connection_failure.emit(
                     f"Unable to reach server. Retry in 5sec."
                 )
-                QTimer.singleShot(self.retry_loop_cooldown, lambda: self.check_server_connection(success_callback))
+                QTimer.singleShot(self.retry_loop_cooldown, self.check_server_connection)
                 return
             # update gui
             self.window.set_server_status(f"Connection attempt #{attempts}", "orange")
@@ -181,7 +196,7 @@ class AppFSM:
             jitter = random.randint(100, 1000)
             delay = exp_delay+jitter
             logger.info(f"Retry #{attempts} delay:{delay}, base:{self.retry_base_delay}, exp:{exp_delay}, jitter:{jitter}")
-            QTimer.singleShot(delay, lambda: self._retry_connect_to_server(attempts, success_callback))
+            QTimer.singleShot(delay, lambda: self._retry_connect_to_server(attempts))
 
     def _add_calculation_entry(self, entry):
         """Puts an INSERT operation in a DB manager's Queue"""

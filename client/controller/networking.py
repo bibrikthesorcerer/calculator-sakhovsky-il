@@ -103,7 +103,7 @@ class HTTPSender:
     def _init_connection(self):
         """Initialize connection parameters"""
         try:
-            self._connection = http.client.HTTPConnection(self.addr, self.port, timeout=10)
+            self._connection = http.client.HTTPConnection(self.addr, self.port)
         except Exception as e:
             logger.error(f"HTTP: Failed to initialize HTTP connection: {e}")
             raise HTTPSenderError(f"Failed to initialize connection: {e}")

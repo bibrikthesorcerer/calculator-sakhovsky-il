@@ -57,7 +57,7 @@ class CalcApp(QApplication):
         self.window.show()
         # init fsm and start initial connection check
         self.window.fsm.transition_to_response_wait()
-        QTimer.singleShot(0, self.window.fsm.check_server_connection)
+        self.window.fsm.check_server_connection()
         self.aboutToQuit.connect(self.window.fsm.cleanup)
 
 
