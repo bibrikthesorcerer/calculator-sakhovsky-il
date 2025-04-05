@@ -72,8 +72,8 @@ class CalcWindow(QWidget):
         self.expression_regex = QRegularExpression(r"[^0-9+\-*/\s()]")
         self.connection_success.connect(self._connection_success_handler)
         self.connection_failure.connect(self._connection_failure_handler)
-        self.fsm = AppFSM(self)
         self._init_ui()
+        self.fsm = AppFSM(self)
 
     def _init_ui(self):
         self.setGeometry(100, 100, 800, 600)
@@ -122,7 +122,7 @@ class CalcWindow(QWidget):
         
         # expression input
         self.expression_input = QLineEdit(self)
-        self.expression_input.returnPressed.connect(self.fsm.on_send_requested)
+        # self.expression_input.returnPressed.connect(self.fsm.on_send_requested)
         self.input_layout.addWidget(self.expression_input)
         
         # controls
@@ -130,7 +130,7 @@ class CalcWindow(QWidget):
         self.input_layout.addLayout(controls_layout)
         
         self.send_button = QPushButton("Send", self)
-        self.send_button.clicked.connect(self.fsm.on_send_requested)
+        # self.send_button.clicked.connect(self.fsm.on_send_requested)
         controls_layout.addWidget(self.send_button)
 
         self.float_mode_checkbox = QCheckBox("Float Mode", self)
@@ -156,7 +156,7 @@ class CalcWindow(QWidget):
         self.server_layout.addWidget(self.server_status)
 
         self.retry_progress = QProgressBar()
-        self.retry_progress.setMaximum(self.fsm.retry_max_attempts)
+        # self.retry_progress.setMaximum(self.fsm.retry_max_attempts)
         self.retry_progress.setVisible(False)
         self.server_layout.addWidget(self.retry_progress)
 

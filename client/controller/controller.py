@@ -31,6 +31,12 @@ class AppFSM:
         self.retry_base_delay = 256
         self.retry_loop_cooldown = 5000
         self.is_server_reachable = True #иначе при первом запуске конфликтует с http реконектом
+
+        # GUI tweaks
+        self.window.retry_progress.setMaximum(self.retry_max_attempts)
+        self.window.expression_input.returnPressed.connect(self.on_send_requested)
+        self.window.send_button.clicked.connect(self.on_send_requested)
+        
         # DB manager
         self.history_manager = DatabaseManager()
         self.history_manager.update_trigger.connect(self.window.refresh_local_data)
