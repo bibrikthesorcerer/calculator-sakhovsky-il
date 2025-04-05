@@ -72,8 +72,8 @@ class AppFSM:
     @Slot()
     def _on_disconnect(self):
         self.transition_to_response_wait()
-        # if(self.is_server_reachable):
-        self.window.set_server_status("Connection failed.", "red") 
+        if(self.is_server_reachable):
+            self.window.set_server_status("Connection failed.", "red") 
 
     def cleanup(self):
         logger.info("Got close signal, cleaning up")
@@ -172,14 +172,14 @@ class AppFSM:
             self.http_sender.check_connection()
             # exit retry loop
             self.window.connection_success.emit()
-            # self.is_server_reachable = True
+            self.is_server_reachable = True
             if self.pending_request is not None:
                 self._send_request()
             else:
                 self.transition_to_input_wait()
         except Exception as e:
             logger.error(f"HTTPRETRY: {e.args}")
-            # self.is_server_reachable = False
+            self.is_server_reachable = False
             attempts += 1
             if attempts > self.retry_max_attempts:
                 self.window.connection_failure.emit(

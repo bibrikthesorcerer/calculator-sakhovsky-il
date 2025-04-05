@@ -212,7 +212,8 @@ class CalcWindow(QWidget):
     def validate_expression(self, expression) -> bool:
         # validate the expression
         if len(expression) > self.max_input_size \
-            or self.expression_regex.match(expression).hasMatch():
+            or self.expression_regex.match(expression).hasMatch()\
+                or not expression:
             self.show_feedback("Invalid arithmetic expression", "red")
             return False
         return True

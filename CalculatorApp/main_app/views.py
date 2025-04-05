@@ -16,7 +16,7 @@ async def calculate_view(request):
         return HttpResponseNotAllowed()
     try:
         float_mode, body = await validate_request(request)        
-    except Exception as e:
+    except Exception as e:        
         print(e)
         return HttpResponseBadRequest(e)
     # perform calculations

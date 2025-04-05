@@ -19,8 +19,7 @@ async def validate_request(request):
     float_mode = request.GET.get('float', 'false')
     if float_mode not in ['false','true']:
         raise Exception("Incorrect float value")
-    float_mode = True if float_mode == "true" else False
-
+    float_mode = True if float_mode == "true" else False    
     #request data validation
     if not request.body:
         raise Exception("Empty request body")
