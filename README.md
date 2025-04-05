@@ -277,3 +277,11 @@ The migration command was added to the **Makefile** to start the server.
 ### SAT-38
 
 A data validation system has been added to the server.
+
+### SAT-41
+
+An error related to spaces in arithmetic expressions entered in the `GUI` has been fixed.
+
+### SAT-42
+
+An error has been fixed that occurs when the program is running when the dependent parts of the program were running in the wrong order.
