@@ -1,3 +1,4 @@
+import re
 from django.http import JsonResponse, HttpResponse, HttpResponseNotAllowed, HttpResponseServerError, HttpResponseBadRequest
 
 from .utils import validate_request
@@ -26,6 +27,7 @@ async def calculate_view(request):
         )
         result = runner.run_app() # got to be async too
         # log result if everything is ok
+        body = re.sub(r"\s", "", body)
         res_obj = await CalculatedResult.objects.acreate(
             expression=body,
             result=result,

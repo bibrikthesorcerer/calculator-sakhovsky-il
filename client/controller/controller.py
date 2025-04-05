@@ -98,7 +98,6 @@ class AppFSM:
 
     def _send_request(self):
         expression = self.window.expression_input.text()
-        expression = re.sub(r"\s", "", expression)
         # validate expression
         if not self.window.validate_expression(expression):
             self.window.show_feedback("Invalid arithmetic expression", "red")
